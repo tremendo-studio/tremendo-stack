@@ -3,6 +3,6 @@ CREATE TABLE `user` (
 	`first_name` text,
 	`last_name` text,
 	`email` text NOT NULL,
-	`created_at` integer,
-	`updated_at` integer
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP)
 );
