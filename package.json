@@ -12,7 +12,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "cross-env DB_SEEDING=true tsx app/db/seed.ts",
+    "db:seed": "tsx app/db/seed.ts",
     "db:local": "turso dev --db-file ./data/local.db --port 8080"
   },
   "prettier": {

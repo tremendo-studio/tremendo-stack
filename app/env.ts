@@ -3,18 +3,10 @@ import { config } from "dotenv"
 
 config()
 
-const stringBoolean = z.coerce
-  .string()
-  .transform((val) => {
-    return val === "true"
-  })
-  .default("false")
-
 const EnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DB_URL: z.string(),
   DB_TOKEN: z.string(),
-  DB_SEEDING: stringBoolean,
 })
 
 export type EnvSchema = z.infer<typeof EnvSchema>
