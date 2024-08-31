@@ -9,19 +9,12 @@ const stringBoolean = z.coerce
 
 const EnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
-  DB_HOST: z.string(),
-  DB_USER: z.string(),
-  DB_TOKEN: z.string(),
-  DB_NAME: z.string(),
-  DB_PORT: z.coerce.number(),
   DB_URL: z.string(),
-  DB_MIGRATING: stringBoolean,
+  DB_TOKEN: z.string(),
   DB_SEEDING: stringBoolean,
 })
 
 export type EnvSchema = z.infer<typeof EnvSchema>
-
-// expand(config())
 
 try {
   EnvSchema.parse(process.env)

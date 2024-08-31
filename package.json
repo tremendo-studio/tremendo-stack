@@ -8,7 +8,11 @@
     "dev": "node ./server.js",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "cross-env NODE_ENV=production node ./server.js",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:local": "turso dev --db-file ./data/local.db --port 8080"
   },
   "prettier": {
     "printWidth": 100,
@@ -23,12 +27,11 @@
   },
   "dependencies": {
     "@libsql/client": "^0.9.0",
+    "@paralleldrive/cuid2": "^2.2.2",
     "@remix-run/express": "^2.11.2",
     "@remix-run/node": "^2.11.2",
     "@remix-run/react": "^2.11.2",
-    "@tremendo-studio/flyio-broadcast": "^1.0.6",
     "compression": "^1.7.4",
-    "cross-env": "^7.0.3",
     "drizzle-orm": "^0.33.0",
     "express": "^4.19.2",
     "isbot": "^4.1.0",
