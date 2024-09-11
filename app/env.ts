@@ -1,12 +1,12 @@
-import { ZodError, z } from "zod"
 import { config } from "dotenv"
+import { z, ZodError } from "zod"
 
 config()
 
 const EnvSchema = z.object({
-  NODE_ENV: z.string().default("development"),
-  DB_URL: z.string(),
   DB_TOKEN: z.string(),
+  DB_URL: z.string(),
+  NODE_ENV: z.string().default("development"),
 })
 
 export type EnvSchema = z.infer<typeof EnvSchema>

@@ -1,6 +1,7 @@
 import { Db } from "~/db"
-import users from "./data/users.json"
 import * as schema from "~/db/schema"
+
+import users from "./data/users.json"
 
 export default async function seed(db: Db) {
   await Promise.all(

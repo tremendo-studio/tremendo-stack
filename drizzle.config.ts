@@ -1,13 +1,14 @@
 import { Config } from "drizzle-kit"
+
 import env from "~/env"
 
 export default {
-  schema: "./app/db/schema/index.ts",
-  out: "./app/db/migrations",
+  dbCredentials: {
+    authToken: env.DB_TOKEN,
+    url: env.DB_URL,
+  },
   dialect: "sqlite",
   driver: "turso",
-  dbCredentials: {
-    url: env.DB_URL,
-    authToken: env.DB_TOKEN,
-  },
+  out: "./app/db/migrations",
+  schema: "./app/db/schema/index.ts",
 } satisfies Config

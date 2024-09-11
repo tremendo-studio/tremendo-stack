@@ -1,16 +1,16 @@
-import { sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { createId } from "@paralleldrive/cuid2"
-import { createInsertSchema } from "drizzle-zod"
 import { sql } from "drizzle-orm"
+import { sqliteTable, text } from "drizzle-orm/sqlite-core"
+import { createInsertSchema } from "drizzle-zod"
 
 const user = sqliteTable("user", {
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
+  email: text("email").notNull(),
+  firstName: text("first_name"),
   id: text("id")
     .$default(() => createId())
     .primaryKey(),
-  firstName: text("first_name"),
   lastName: text("last_name"),
-  email: text("email").notNull(),
-  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
 })
 
