@@ -10,6 +10,15 @@ export default defineConfig({
         v3_relativeSplatPath: true,
         v3_throwAbortReason: true,
       },
+      routes(defineRoutes) {
+        return defineRoutes((route) => {
+          route(undefined, "modules/auth/routes/layout.tsx", () => {
+            route("/sign-in", "modules/auth/routes/sign-in.tsx")
+            route("/sign-up", "modules/auth/routes/sign-up.tsx")
+            route("/authenticate", "modules/auth/routes/authenticate.tsx")
+          })
+        })
+      },
     }),
     tsconfigPaths(),
   ],

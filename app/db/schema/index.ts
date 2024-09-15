@@ -1,1 +1,2 @@
-export { default as user, insertUserSchema } from "./user"
+export { default as authSessions, insertAuthSessionSchema } from "./auth-sessions"
+export { default as users, insertUserSchema } from "./users"
