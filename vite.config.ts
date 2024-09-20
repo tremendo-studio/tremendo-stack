@@ -3,6 +3,9 @@ import { defineConfig } from "vite"
 import tsconfigPaths from "vite-tsconfig-paths"
 
 export default defineConfig({
+  optimizeDeps: {
+    exclude: ["@mapbox", "mock-aws-s3", "nock", "aws-sdk"],
+  },
   plugins: [
     remix({
       future: {
@@ -12,10 +15,11 @@ export default defineConfig({
       },
       routes(defineRoutes) {
         return defineRoutes((route) => {
+          route("/", "modules/home/index.tsx")
           route(undefined, "modules/auth/routes/layout.tsx", () => {
-            route("/sign-in", "modules/auth/routes/sign-in.tsx")
-            route("/sign-up", "modules/auth/routes/sign-up.tsx")
-            route("/authenticate", "modules/auth/routes/authenticate.tsx")
+            route("sign-in", "modules/auth/routes/sign-in.tsx")
+            route("sign-up", "modules/auth/routes/sign-up.tsx")
+            route("authenticate", "modules/auth/routes/authenticate.tsx")
           })
         })
       },

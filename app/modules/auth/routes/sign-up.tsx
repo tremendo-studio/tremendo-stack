@@ -1,13 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ActionFunctionArgs } from "@remix-run/node"
-import { json, Link, useActionData, useSubmit } from "@remix-run/react"
+import { json, Link, useActionData, useFetcher } from "@remix-run/react"
+import clsx from "clsx"
+import crypto from "crypto"
 import { eq } from "drizzle-orm"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 
-import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import {
   Form,
@@ -19,9 +20,13 @@ import {
 } from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
 import { db } from "~/db"
-import { authSessions, users } from "~/db/schema"
+import { authSession, user } from "~/db/schema"
 
+import { FluidContainer } from "../components/fluid-container"
+import { SubmitButton } from "../components/submit-button"
 import { createAuthSession } from "../utils/auth-session.server"
+import { hasErrors } from "../utils/has-errors"
+import { hash } from "../utils/hash.server"
 
 const FormSchema = z.object({
   email: z
@@ -36,42 +41,72 @@ const FormSchema = z.object({
 })
 
 export async function action({ request }: ActionFunctionArgs) {
-  let data
-
-  try {
-    const body = await request.json()
-    data = FormSchema.parse(body)
-  } catch (error) {
+  const bodyResult = FormSchema.safeParse(await request.json())
+  if (bodyResult.error)
     return json(
       { message: "Invalid form data. Please check your input and try again." },
       { status: 400 },
     )
+
+  const data = bodyResult.data
+
+  const otp = String(crypto.randomInt(100000, 999999))
+  const otpHash = await hash(otp)
+
+  console.debug(otp)
+
+  const usersResult = await db.select().from(user).where(eq(user.email, data.email))
+  if (usersResult.length) {
+    try {
+      const session = await db
+        .insert(authSession)
+        .values({
+          expiresAt: new Date(Date.now() * 60 * 15).toDateString(),
+          otpHash: otpHash,
+          userEmail: data.email,
+        })
+        .returning()
+
+      return await createAuthSession({
+        redirectTo: "/authenticate",
+        remember: 60 * 15,
+        request,
+        sessionId: session[0].id,
+      })
+    } catch (error) {
+      console.error(error)
+      return json(
+        {
+          message:
+            "An error occurred while processing your request. Please try again later or contact support if the issue persists.",
+          ok: false,
+        },
+        { status: 500 },
+      )
+    }
   }
 
-  const usersResult = await db.select().from(users).where(eq(users.email, data.email))
-  if (usersResult.length)
-    return json(
-      {
-        message: `An account with the email address ${data.email} is already registered. Please try logging in or use a different email address to create a new account.`,
-        ok: false,
-      },
-      { status: 400 },
-    )
-
   try {
-    const authSession = await db.transaction(async (tx) => {
-      await tx.insert(users).values(data)
-      return await tx.insert(authSessions).values({ userEmail: data.email }).returning()
+    const session = await db.transaction(async (tx) => {
+      await tx.insert(user).values(data)
+      return await tx
+        .insert(authSession)
+        .values({
+          expiresAt: new Date(Date.now() * 60 * 15).toDateString(),
+          otpHash: otpHash,
+          userEmail: data.email,
+        })
+        .returning()
     })
 
     return await createAuthSession({
       redirectTo: "/authenticate",
       remember: 60 * 15,
       request,
-      sessionId: authSession[0].id,
+      sessionId: session[0].id,
     })
   } catch (error) {
-    console.error(error)
+    console.debug(error)
     return json(
       {
         message:
@@ -93,10 +128,10 @@ export default function SignUp() {
     resolver: zodResolver(FormSchema),
   })
 
-  const submit = useSubmit()
+  const fetcher = useFetcher()
 
   function onSubmit(data: z.infer<typeof FormSchema>) {
-    submit(data, { encType: "application/json", method: "post" })
+    fetcher.submit(data, { encType: "application/json", method: "post" })
   }
 
   useEffect(() => {
@@ -108,7 +143,12 @@ export default function SignUp() {
   }, [actionData?.message])
 
   return (
-    <Card className="mx-auto max-w-sm">
+    <Card
+      className={clsx(
+        "mx-auto max-w-sm",
+        hasErrors(form.formState.errors) && "animate-shake-horizontal",
+      )}
+    >
       <CardHeader>
         <CardTitle className="text-xl">Sign Up</CardTitle>
         <CardDescription>Enter your information to create an account</CardDescription>
@@ -127,7 +167,9 @@ export default function SignUp() {
                       <FormControl>
                         <Input {...field} id="first-name" placeholder="Romualdo" required />
                       </FormControl>
-                      <FormMessage />
+                      <FluidContainer>
+                        <FormMessage />
+                      </FluidContainer>
                     </FormItem>
                   )}
                 />
@@ -140,7 +182,9 @@ export default function SignUp() {
                       <FormControl>
                         <Input {...field} id="last-name" placeholder="Robinson" required />
                       </FormControl>
-                      <FormMessage />
+                      <FluidContainer>
+                        <FormMessage />
+                      </FluidContainer>
                     </FormItem>
                   )}
                 />
@@ -154,13 +198,13 @@ export default function SignUp() {
                     <FormControl>
                       <Input {...field} id="email" placeholder="romualdo@acme.com" required />
                     </FormControl>
-                    <FormMessage />
+                    <FluidContainer>
+                      <FormMessage />
+                    </FluidContainer>
                   </FormItem>
                 )}
               />
-              <Button className="w-full" type="submit">
-                Create an account
-              </Button>
+              <SubmitButton state={fetcher.state}>Create an account</SubmitButton>
             </div>
           </form>
         </Form>

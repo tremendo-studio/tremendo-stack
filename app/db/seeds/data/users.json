@@ -1,27 +1,37 @@
 [
   {
+    "email": "john.doe@example.com",
     "firstName": "John",
     "lastName": "Doe",
-    "email": "john.doe@example.com"
+    "createdAt": "2024-09-18T14:30:00Z",
+    "updatedAt": "2024-09-18T15:00:00Z"
   },
   {
+    "email": "jane.smith@example.com",
     "firstName": "Jane",
     "lastName": "Smith",
-    "email": "jane.smith@example.com"
+    "createdAt": "2024-09-17T09:15:00Z",
+    "updatedAt": "2024-09-17T09:30:00Z"
   },
   {
+    "email": "alice.wonder@example.com",
     "firstName": "Alice",
-    "lastName": "Johnson",
-    "email": "alice.johnson@example.com"
+    "lastName": "Wonder",
+    "createdAt": "2024-09-16T12:45:00Z",
+    "updatedAt": "2024-09-16T13:00:00Z"
   },
   {
+    "email": "bob.marley@example.com",
     "firstName": "Bob",
-    "lastName": "Brown",
-    "email": "bob.brown@example.com"
+    "lastName": "Marley",
+    "createdAt": "2024-09-15T08:00:00Z",
+    "updatedAt": "2024-09-15T08:15:00Z"
   },
   {
+    "email": "charlie.brown@example.com",
     "firstName": "Charlie",
-    "lastName": "Davis",
-    "email": "charlie.davis@example.com"
+    "lastName": "Brown",
+    "createdAt": "2024-09-14T16:20:00Z",
+    "updatedAt": "2024-09-14T16:35:00Z"
   }
 ]

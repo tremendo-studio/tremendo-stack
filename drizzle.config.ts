@@ -1,14 +1,11 @@
-import { Config } from "drizzle-kit"
+import { defineConfig } from "vite"
 
-import env from "~/env"
-
-export default {
+export default defineConfig({
   dbCredentials: {
-    authToken: env.DB_TOKEN,
-    url: env.DB_URL,
+    url: process.env.DB_URL,
   },
-  dialect: "sqlite",
-  driver: "turso",
-  out: "./app/db/migrations",
+  dialect: "postgresql",
   schema: "./app/db/schema/index.ts",
-} satisfies Config
+  strict: true,
+  verbose: true,
+})
