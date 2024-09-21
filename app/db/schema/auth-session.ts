@@ -6,8 +6,10 @@ const authSession = sqliteTable("auth_sessions", {
   attempts: integer("attempts")
     .notNull()
     .$default(() => 0),
-  createdAt: text("created_at").$default(() => new Date().toISOString()),
-  expiresAt: text("expires_at").$default(() => new Date(Date.now() + 10 * 60 * 1000).toISOString()),
+  createdAt: text("created_at")
+    .notNull()
+    .$default(() => new Date().toISOString()),
+  expiresAt: text("expires_at").notNull(),
   id: text("id")
     .$default(() => createId())
     .primaryKey(),

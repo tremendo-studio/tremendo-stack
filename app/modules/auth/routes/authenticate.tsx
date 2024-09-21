@@ -69,7 +69,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return json({ message: "Invalid OTP. Please check your input and try again." }, { status: 400 })
   }
 
-  return null
+  return redirect("/dashboard")
 }
 
 export default function Authenticate() {

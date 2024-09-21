@@ -16,6 +16,7 @@ export default defineConfig({
       routes(defineRoutes) {
         return defineRoutes((route) => {
           route("/", "modules/home/index.tsx")
+          route("/dashboard", "modules/dashboard/routes/dashboard.tsx")
           route(undefined, "modules/auth/routes/layout.tsx", () => {
             route("sign-in", "modules/auth/routes/sign-in.tsx")
             route("sign-up", "modules/auth/routes/sign-up.tsx")

@@ -61,7 +61,7 @@ export async function action({ request }: ActionFunctionArgs) {
       const session = await db
         .insert(authSession)
         .values({
-          expiresAt: new Date(Date.now() * 60 * 15).toDateString(),
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
           otpHash: otpHash,
           userEmail: data.email,
         })
@@ -92,7 +92,7 @@ export async function action({ request }: ActionFunctionArgs) {
       return await tx
         .insert(authSession)
         .values({
-          expiresAt: new Date(Date.now() * 60 * 15).toDateString(),
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
           otpHash: otpHash,
           userEmail: data.email,
         })
