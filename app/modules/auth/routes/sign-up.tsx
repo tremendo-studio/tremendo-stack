@@ -21,6 +21,7 @@ import {
 import { Input } from "~/components/ui/input"
 import { db } from "~/db"
 import { authSession, user } from "~/db/schema"
+import { sendOTP } from "~/integrations/resend.server"
 
 import { FluidContainer } from "../components/fluid-container"
 import { SubmitButton } from "../components/submit-button"
@@ -67,6 +68,9 @@ export async function action({ request }: ActionFunctionArgs) {
         })
         .returning()
 
+      const email = await sendOTP(otp, data.email)
+      console.debug("email", JSON.stringify(email))
+
       return await createAuthSession({
         redirectTo: "/authenticate",
         remember: 60 * 15,
@@ -98,6 +102,9 @@ export async function action({ request }: ActionFunctionArgs) {
         })
         .returning()
     })
+
+    const email = await sendOTP(otp, data.email)
+    console.debug("email", JSON.stringify(email))
 
     return await createAuthSession({
       redirectTo: "/authenticate",

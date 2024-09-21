@@ -1,5 +1,4 @@
 import { Link } from "@remix-run/react"
-import { CircleUserRound } from "lucide-react"
 
 import { buttonVariants } from "~/components/ui/button"
 
@@ -9,7 +8,7 @@ export default function Dashboard() {
       <header className="bg-background flex h-10 items-center justify-end border-b">
         <nav className="flex gap-x-1 pb-1 text-lg font-medium md:text-sm">
           <Link className={buttonVariants({ size: "sm", variant: "ghost" })} to="/sign-up">
-            <CircleUserRound strokeWidth={1.5}></CircleUserRound>
+            Logout
           </Link>
         </nav>
       </header>
