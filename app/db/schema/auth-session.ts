@@ -1,19 +1,19 @@
 import { createId } from "@paralleldrive/cuid2"
-import { boolean, char, integer, pgTable, timestamp, varchar } from "drizzle-orm/pg-core"
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { createInsertSchema } from "drizzle-zod"
 
-const authSession = pgTable("auth_sessions", {
+const authSession = sqliteTable("auth_sessions", {
   attempts: integer("attempts")
     .notNull()
     .$default(() => 0),
-  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
-  expiresAt: timestamp("expires_at", { mode: "string" }).notNull(),
-  id: char("id", { length: 24 })
+  createdAt: text("created_at").$default(() => new Date().toISOString()),
+  expiresAt: text("expires_at").$default(() => new Date(Date.now() + 10 * 60 * 1000).toISOString()),
+  id: text("id")
     .$default(() => createId())
     .primaryKey(),
-  otpHash: varchar("otp_hash").notNull(),
-  used: boolean("used").notNull().default(false),
-  userEmail: varchar("email", { length: 255 }).notNull(),
+  otpHash: text("otp_hash").notNull(),
+  used: integer("id", { mode: "boolean" }).notNull().default(false),
+  userEmail: text("user_email").notNull(),
 })
 
 export default authSession
