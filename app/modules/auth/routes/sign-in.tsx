@@ -1,10 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { createId } from "@paralleldrive/cuid2"
 import { ActionFunctionArgs } from "@remix-run/node"
 import { json, Link, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
-import crypto from "crypto"
-import { eq } from "drizzle-orm"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
@@ -18,14 +15,10 @@ import {
   FormMessage,
 } from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
-import { db } from "~/db"
-import { authSession, user } from "~/db/schema"
 
-import { FluidContainer } from "../components/fluid-container"
-import { SubmitButton } from "../components/submit-button"
-import { createAuthSession } from "../utils/auth-session.server"
-import { hasErrors } from "../utils/has-errors"
-import { hash } from "../utils/hash.server"
+import { FluidContainer, SubmitButton } from "../components"
+import { AuthSession, OTP } from "../models"
+import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
   email: z
@@ -35,43 +28,25 @@ const FormSchema = z.object({
 
 export async function action({ request }: ActionFunctionArgs) {
   const bodyResult = FormSchema.safeParse(await request.json())
-  if (bodyResult.error)
+  if (bodyResult.error) {
     return json(
       { message: "Invalid form data. Please check your input and try again." },
       { status: 400 },
     )
+  }
 
   const data = bodyResult.data
 
-  const otp = String(crypto.randomInt(100000, 999999))
-  const otpHash = await hash(otp)
-
-  const usersResult = await db.select().from(user).where(eq(user.email, data.email))
-  if (!usersResult.length) {
-    return await createAuthSession({
-      redirectTo: "/authenticate",
-      remember: 60 * 15,
-      request,
-      sessionId: createId(),
-    })
-  }
+  const otp = new OTP()
+  const authSession = new AuthSession({ request })
 
   try {
-    const session = await db
-      .insert(authSession)
-      .values({
-        expiresAt: new Date(Date.now() * 60 * 15).toDateString(),
-        otpHash: otpHash,
-        userEmail: data.email,
-      })
-      .returning()
-
-    return await createAuthSession({
-      redirectTo: "/authenticate",
-      remember: 60 * 15,
-      request,
-      sessionId: session[0].id,
+    const { redirect } = await authSession.saveSession({
+      email: data.email,
+      otpHash: await otp.hash(),
+      redirectTo: "/auth",
     })
+    return redirect
   } catch (error) {
     return json(
       {
@@ -94,17 +69,14 @@ export default function SignIn() {
 
   const fetcher = useFetcher()
 
+  const errors = !isEmpty(form.formState.errors)
+
   function onSubmit(data: z.infer<typeof FormSchema>) {
     fetcher.submit(data, { encType: "application/json", method: "post" })
   }
 
   return (
-    <Card
-      className={clsx(
-        "mx-auto max-w-sm",
-        hasErrors(form.formState.errors) && "animate-shake-horizontal",
-      )}
-    >
+    <Card className={clsx("mx-auto max-w-sm", errors && "animate-shake-horizontal")}>
       <CardHeader>
         <CardTitle className="text-xl">Sign In</CardTitle>
         <CardDescription>Enter your email to sing in</CardDescription>

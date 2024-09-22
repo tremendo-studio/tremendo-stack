@@ -1,8 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
-import { json, Link, redirect, useFetcher } from "@remix-run/react"
+import { json, Link, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
-import { eq } from "drizzle-orm"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -10,14 +9,10 @@ import { z } from "zod"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "~/components/ui/form"
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "~/components/ui/input-otp"
-import { db } from "~/db"
-import { authSession } from "~/db/schema"
 
-import { FluidContainer } from "../components/fluid-container"
-import { SubmitButton } from "../components/submit-button"
-import { deleteAuthSession, getAuthSessionId } from "../utils/auth-session.server"
-import { hasErrors } from "../utils/has-errors"
-import { compare } from "../utils/hash.server"
+import { FluidContainer, SubmitButton } from "../components"
+import { AuthSession, OTP } from "../models"
+import { isEmpty } from "../utils"
 
 const MAX_ATTEMPTS = 3
 
@@ -28,51 +23,52 @@ const FormSchema = z.object({
 })
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const sessionId = await getAuthSessionId(request)
-  if (!sessionId) return await deleteAuthSession({ redirectTo: "/", request })
+  const authSession = new AuthSession({ request })
+  const session = await authSession.getSession()
+  if (!session) {
+    return (await authSession.deleteSession("/")).redirect
+  }
 
   return null
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  const sessionId = await getAuthSessionId(request)
-  if (!sessionId) return redirect("/")
+  const authSession = new AuthSession({ request })
+  const session = await authSession.getSession()
+  if (!session) {
+    return (await authSession.deleteSession("/")).redirect
+  }
 
   const bodyResult = FormSchema.safeParse(await request.json())
   if (bodyResult.error) {
     return json({ message: "Invalid OTP. Please check your input and try again." }, { status: 400 })
   }
 
-  const otp = bodyResult.data.pin
+  const data = bodyResult.data
 
-  const session = await db.select().from(authSession).where(eq(authSession.id, sessionId))
-  if (!session.length) {
-    return json({ message: "Invalid OTP. Please check your input and try again." }, { status: 400 })
-  }
-
-  if (session[0].attempts >= MAX_ATTEMPTS) {
+  if (session.attempts >= MAX_ATTEMPTS) {
     return json(
       { message: "Maximum attempts reached. Please request a new password." },
       { status: 400 },
     )
   }
 
-  if (new Date(session[0].expiresAt).getTime() < Date.now()) {
+  if (new Date(session.expiresAt).getTime() < Date.now()) {
     return json(
       { message: "Your password has expired. Please request a new one." },
       { status: 400 },
     )
   }
 
-  if (!(await compare(otp, session[0].otpHash))) {
-    await db.update(authSession).set({ attempts: session[0].attempts + 1 })
+  const validPassword = await OTP.compare({ hash: session.otpHash, otp: data.pin })
+  if (!validPassword) {
+    await authSession.increaseAttempts()
     return json({ message: "Invalid OTP. Please check your input and try again." }, { status: 400 })
   }
-
-  return redirect("/dashboard")
+  return (await authSession.deleteSession("/dashboard")).redirect
 }
 
-export default function Authenticate() {
+export default function Auth() {
   const form = useForm<z.infer<typeof FormSchema>>({
     defaultValues: {
       pin: "",
@@ -84,6 +80,7 @@ export default function Authenticate() {
 
   const serverError = fetcher.data as { message: string } | undefined
   const formValue = fetcher.json as { pin: string } | undefined
+  const errors = !isEmpty(form.formState.errors)
 
   useEffect(() => {
     if (!formValue?.pin) return
@@ -100,12 +97,7 @@ export default function Authenticate() {
   }
 
   return (
-    <Card
-      className={clsx(
-        "mx-auto max-w-sm",
-        hasErrors(form.formState.errors) && "animate-shake-horizontal",
-      )}
-    >
+    <Card className={clsx("mx-auto max-w-sm", errors && "animate-shake-horizontal")}>
       <CardHeader>
         <CardTitle className="text-xl">One-Time Password</CardTitle>
         <CardDescription>Please enter the one-time password sent to your email.</CardDescription>

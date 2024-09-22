@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { ActionFunctionArgs } from "@remix-run/node"
 import { json, Link, useActionData, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
-import crypto from "crypto"
 import { eq } from "drizzle-orm"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -20,14 +19,12 @@ import {
 } from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
 import { db } from "~/db"
-import { authSession, user } from "~/db/schema"
+import { user as userSchema } from "~/db/schema"
 import { sendOTP } from "~/integrations/resend.server"
 
-import { FluidContainer } from "../components/fluid-container"
-import { SubmitButton } from "../components/submit-button"
-import { createAuthSession } from "../utils/auth-session.server"
-import { hasErrors } from "../utils/has-errors"
-import { hash } from "../utils/hash.server"
+import { FluidContainer, SubmitButton } from "../components"
+import { AuthSession, OTP } from "../models"
+import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
   email: z
@@ -45,38 +42,25 @@ export async function action({ request }: ActionFunctionArgs) {
   const bodyResult = FormSchema.safeParse(await request.json())
   if (bodyResult.error)
     return json(
-      { message: "Invalid form data. Please check your input and try again." },
+      { message: "Invalid form data. Please check your input and try again.", ok: false },
       { status: 400 },
     )
 
   const data = bodyResult.data
+  const otp = new OTP()
 
-  const otp = String(crypto.randomInt(100000, 999999))
-  const otpHash = await hash(otp)
+  const authSession = new AuthSession({ request })
+  const user = await db.select().from(userSchema).where(eq(userSchema.email, data.email))
 
-  console.debug(otp)
-
-  const usersResult = await db.select().from(user).where(eq(user.email, data.email))
-  if (usersResult.length) {
+  if (user.length) {
     try {
-      const session = await db
-        .insert(authSession)
-        .values({
-          expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-          otpHash: otpHash,
-          userEmail: data.email,
-        })
-        .returning()
-
-      const email = await sendOTP(otp, data.email)
-      console.debug("email", JSON.stringify(email))
-
-      return await createAuthSession({
-        redirectTo: "/authenticate",
-        remember: 60 * 15,
-        request,
-        sessionId: session[0].id,
+      const { redirect } = await authSession.saveSession({
+        email: data.email,
+        otpHash: await otp.hash(),
+        redirectTo: "/auth",
       })
+      await sendOTP(otp.value, data.email)
+      return redirect
     } catch (error) {
       console.error(error)
       return json(
@@ -91,27 +75,14 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
-    const session = await db.transaction(async (tx) => {
-      await tx.insert(user).values(data)
-      return await tx
-        .insert(authSession)
-        .values({
-          expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-          otpHash: otpHash,
-          userEmail: data.email,
-        })
-        .returning()
+    await db.insert(userSchema).values(data)
+    const { redirect } = await authSession.saveSession({
+      email: data.email,
+      otpHash: await otp.hash(),
+      redirectTo: "/auth",
     })
-
-    const email = await sendOTP(otp, data.email)
-    console.debug("email", JSON.stringify(email))
-
-    return await createAuthSession({
-      redirectTo: "/authenticate",
-      remember: 60 * 15,
-      request,
-      sessionId: session[0].id,
-    })
+    await sendOTP(otp.value, data.email)
+    return redirect
   } catch (error) {
     console.debug(error)
     return json(
@@ -137,6 +108,8 @@ export default function SignUp() {
 
   const fetcher = useFetcher()
 
+  const errors = !isEmpty(form.formState.errors)
+
   function onSubmit(data: z.infer<typeof FormSchema>) {
     fetcher.submit(data, { encType: "application/json", method: "post" })
   }
@@ -150,12 +123,7 @@ export default function SignUp() {
   }, [actionData?.message])
 
   return (
-    <Card
-      className={clsx(
-        "mx-auto max-w-sm",
-        hasErrors(form.formState.errors) && "animate-shake-horizontal",
-      )}
-    >
+    <Card className={clsx("mx-auto max-w-sm", errors && "animate-shake-horizontal")}>
       <CardHeader>
         <CardTitle className="text-xl">Sign Up</CardTitle>
         <CardDescription>Enter your information to create an account</CardDescription>

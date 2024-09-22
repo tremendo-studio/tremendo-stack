@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from "react"
 
-export function FluidContainer({ children }: { children: ReactNode }) {
+export default function FluidContainer({ children }: { children: ReactNode }) {
   const outerContainer = useRef<HTMLDivElement>(null)
   const innerContainer = useRef<HTMLDivElement>(null)
 
