@@ -20,7 +20,7 @@ import {
 import { Input } from "~/components/ui/input"
 import { db } from "~/db"
 import { user as userSchema } from "~/db/schema"
-import { sendOTP } from "~/integrations/resend.server"
+import { Email, OtpTemplate } from "~/modules/email"
 
 import { FluidContainer, SubmitButton } from "../components"
 import { AuthSession, OTP } from "../models"
@@ -50,6 +50,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const otp = new OTP()
 
   const authSession = new AuthSession({ request })
+  const email = new Email({ subject: "OTP", template: OtpTemplate({ otp: otp.value }) })
   const user = await db.select().from(userSchema).where(eq(userSchema.email, data.email))
 
   if (user.length) {
@@ -59,7 +60,7 @@ export async function action({ request }: ActionFunctionArgs) {
         otpHash: await otp.hash(),
         redirectTo: "/auth",
       })
-      await sendOTP(otp.value, data.email)
+      await email.send(data.email)
       return redirect
     } catch (error) {
       console.error(error)
@@ -81,7 +82,7 @@ export async function action({ request }: ActionFunctionArgs) {
       otpHash: await otp.hash(),
       redirectTo: "/auth",
     })
-    await sendOTP(otp.value, data.email)
+    await email.send(data.email)
     return redirect
   } catch (error) {
     console.debug(error)

@@ -1,5 +1,6 @@
 import { vitePlugin as remix } from "@remix-run/dev"
 import { defineConfig } from "vite"
+import commonjs from "vite-plugin-commonjs"
 import tsconfigPaths from "vite-tsconfig-paths"
 
 export default defineConfig({
@@ -7,6 +8,7 @@ export default defineConfig({
     exclude: ["@mapbox", "mock-aws-s3", "nock", "aws-sdk"],
   },
   plugins: [
+    commonjs(),
     remix({
       future: {
         v3_fetcherPersist: true,
