@@ -14,7 +14,7 @@ const authSession = sqliteTable("auth_sessions", {
     .$default(() => createId())
     .primaryKey(),
   otpHash: text("otp_hash").notNull(),
-  used: integer("id", { mode: "boolean" }).notNull().default(false),
+  used: integer("used", { mode: "boolean" }).notNull().default(false),
   userEmail: text("user_email").notNull(),
 })
 

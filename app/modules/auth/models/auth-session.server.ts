@@ -34,24 +34,18 @@ const sessionStorage = createCookieSessionStorage<SessionData>({
 })
 
 export default class AuthSession {
-  #cookieSessionStorage: SessionStorage
-  #duration: number
-
+  cookieSessionStorage: SessionStorage
+  duration: number
   request: Request
 
   constructor({ cookieSessionStorage = sessionStorage, request }: ConstructorArgs) {
-    this.#cookieSessionStorage = cookieSessionStorage
-    this.#duration = DURATION_IN_MINUTES
-
+    this.cookieSessionStorage = cookieSessionStorage
+    this.duration = DURATION_IN_MINUTES
     this.request = request
   }
 
-  async #getCookieSession() {
-    return await this.#cookieSessionStorage.getSession(this.request.headers.get("Cookie"))
-  }
-
   async deleteSession(redirectTo: string) {
-    const cookieSession = await this.#getCookieSession()
+    const cookieSession = await this.getCookieSession()
     const sessionId = cookieSession.get(AUTH_SESSION_KEY)
 
     const dbSession = await db
@@ -70,8 +64,12 @@ export default class AuthSession {
     }
   }
 
+  async getCookieSession() {
+    return await this.cookieSessionStorage.getSession(this.request.headers.get("Cookie"))
+  }
+
   async getSession() {
-    const cookieSession = await this.#getCookieSession()
+    const cookieSession = await this.getCookieSession()
     const sessionId = cookieSession.get(AUTH_SESSION_KEY)
     if (!sessionId) return
 
@@ -93,20 +91,20 @@ export default class AuthSession {
     const dbSession = await db
       .insert(authSession)
       .values({
-        expiresAt: new Date(Date.now() + this.#duration * 1000).toISOString(),
+        expiresAt: new Date(Date.now() + this.duration * 1000).toISOString(),
         otpHash: otpHash,
         userEmail: email,
       })
       .returning()
 
-    const cookieSession = await this.#getCookieSession()
+    const cookieSession = await this.getCookieSession()
     cookieSession.set(AUTH_SESSION_KEY, dbSession[0].id)
 
     return {
       redirect: redirect(redirectTo, {
         headers: {
           "Set-Cookie": await sessionStorage.commitSession(cookieSession, {
-            maxAge: this.#duration,
+            maxAge: this.duration,
           }),
         },
       }),

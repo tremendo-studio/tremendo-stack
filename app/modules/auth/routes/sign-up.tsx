@@ -46,6 +46,9 @@ export async function action({ request }: ActionFunctionArgs) {
       { status: 400 },
     )
 
+  const userAgent = request.headers.get("user-agent")
+  console.debug(userAgent)
+
   const data = bodyResult.data
   const otp = new OTP()
 

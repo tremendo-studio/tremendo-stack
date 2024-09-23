@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
-import { json, Link, useFetcher } from "@remix-run/react"
+import { json, Link, redirect, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -26,7 +26,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const authSession = new AuthSession({ request })
   const session = await authSession.getSession()
   if (!session) {
-    return (await authSession.deleteSession("/")).redirect
+    return redirect("/")
   }
 
   return null
