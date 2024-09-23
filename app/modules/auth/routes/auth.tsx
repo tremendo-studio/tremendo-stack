@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "~/component
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "~/components/ui/input-otp"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { AuthSession, OTP } from "../models"
+import { AuthSessionStorage, OTP } from "../services"
 import { isEmpty } from "../utils"
 
 const MAX_ATTEMPTS = 3
@@ -23,21 +23,17 @@ const FormSchema = z.object({
 })
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const authSession = new AuthSession({ request })
+  const authSession = new AuthSessionStorage({ request })
   const session = await authSession.getSession()
-  if (!session) {
-    return redirect("/")
-  }
+  if (!session) return redirect("/")
 
   return null
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  const authSession = new AuthSession({ request })
+  const authSession = new AuthSessionStorage({ request })
   const session = await authSession.getSession()
-  if (!session) {
-    return (await authSession.deleteSession("/")).redirect
-  }
+  if (!session) return redirect("/")
 
   const bodyResult = FormSchema.safeParse(await request.json())
   if (bodyResult.error) {
@@ -65,6 +61,7 @@ export async function action({ request }: ActionFunctionArgs) {
     await authSession.increaseAttempts()
     return json({ message: "Invalid OTP. Please check your input and try again." }, { status: 400 })
   }
+
   return (await authSession.deleteSession("/dashboard")).redirect
 }
 

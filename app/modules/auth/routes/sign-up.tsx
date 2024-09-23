@@ -23,7 +23,7 @@ import { user as userSchema } from "~/db/schema"
 import { Email, OtpTemplate } from "~/modules/email"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { AuthSession, OTP } from "../models"
+import { AuthSessionStorage, OTP } from "../services"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -46,46 +46,20 @@ export async function action({ request }: ActionFunctionArgs) {
       { status: 400 },
     )
 
-  const userAgent = request.headers.get("user-agent")
-  console.debug(userAgent)
-
-  const data = bodyResult.data
+  const userData = bodyResult.data
   const otp = new OTP()
-
-  const authSession = new AuthSession({ request })
+  const authSessionStorage = new AuthSessionStorage({ request })
   const email = new Email({ subject: "OTP", template: OtpTemplate({ otp: otp.value }) })
-  const user = await db.select().from(userSchema).where(eq(userSchema.email, data.email))
-
-  if (user.length) {
-    try {
-      const { redirect } = await authSession.saveSession({
-        email: data.email,
-        otpHash: await otp.hash(),
-        redirectTo: "/auth",
-      })
-      await email.send(data.email)
-      return redirect
-    } catch (error) {
-      console.error(error)
-      return json(
-        {
-          message:
-            "An error occurred while processing your request. Please try again later or contact support if the issue persists.",
-          ok: false,
-        },
-        { status: 500 },
-      )
-    }
-  }
+  const user = await db.select().from(userSchema).where(eq(userSchema.email, userData.email))
 
   try {
-    await db.insert(userSchema).values(data)
-    const { redirect } = await authSession.saveSession({
-      email: data.email,
+    if (!user.length) await db.insert(userSchema).values(userData)
+    const { redirect } = await authSessionStorage.saveSession({
+      email: userData.email,
       otpHash: await otp.hash(),
       redirectTo: "/auth",
     })
-    await email.send(data.email)
+    await email.send(userData.email)
     return redirect
   } catch (error) {
     console.debug(error)

@@ -16,11 +16,9 @@ export default class OTP {
   }
 
   async hash() {
-    if (this.#hashedValue) {
-      return this.#hashedValue
+    if (!this.#hashedValue) {
+      this.#hashedValue = await bcrypt.hash(this.value, SALT_ROUNDS)
     }
-
-    this.#hashedValue = await bcrypt.hash(this.value, SALT_ROUNDS)
     return this.#hashedValue
   }
 }

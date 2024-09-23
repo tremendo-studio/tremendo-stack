@@ -2,7 +2,7 @@
 
 /node_modules
 /build
-/postgres-data
 /data
 
 .env
+.DS_Store

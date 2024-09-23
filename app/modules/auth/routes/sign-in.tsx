@@ -15,9 +15,10 @@ import {
   FormMessage,
 } from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
+import { Email, OtpTemplate } from "~/modules/email"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { AuthSession, OTP } from "../models"
+import { AuthSessionStorage, OTP } from "../services"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -35,17 +36,18 @@ export async function action({ request }: ActionFunctionArgs) {
     )
   }
 
-  const data = bodyResult.data
-
+  const userData = bodyResult.data
   const otp = new OTP()
-  const authSession = new AuthSession({ request })
+  const authSession = new AuthSessionStorage({ request })
+  const email = new Email({ subject: "OTP", template: OtpTemplate({ otp: otp.value }) })
 
   try {
     const { redirect } = await authSession.saveSession({
-      email: data.email,
+      email: userData.email,
       otpHash: await otp.hash(),
       redirectTo: "/auth",
     })
+    await email.send(userData.email)
     return redirect
   } catch (error) {
     return json(

@@ -9,12 +9,12 @@ const authSession = sqliteTable("auth_sessions", {
   createdAt: text("created_at")
     .notNull()
     .$default(() => new Date().toISOString()),
+  deleted: integer("used", { mode: "boolean" }).notNull().default(false),
   expiresAt: text("expires_at").notNull(),
   id: text("id")
     .$default(() => createId())
     .primaryKey(),
   otpHash: text("otp_hash").notNull(),
-  used: integer("used", { mode: "boolean" }).notNull().default(false),
   userEmail: text("user_email").notNull(),
 })
 

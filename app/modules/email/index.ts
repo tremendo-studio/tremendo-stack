@@ -1,2 +1,2 @@
 export { OtpTemplate } from "./components"
-export { Email } from "./integrations"
+export { Email } from "./services"
