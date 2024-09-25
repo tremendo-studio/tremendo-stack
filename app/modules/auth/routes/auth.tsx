@@ -9,12 +9,12 @@ import { z } from "zod"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "~/components/ui/form"
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "~/components/ui/input-otp"
+import { AppError } from "~/utils/error.server"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { AuthSessionStorage, OTP } from "../services"
+import { getSession } from "../services"
+import { logIn, LogInError } from "../services/login.server"
 import { isEmpty } from "../utils"
-
-const MAX_ATTEMPTS = 3
 
 const FormSchema = z.object({
   pin: z.string().min(6, {
@@ -23,18 +23,13 @@ const FormSchema = z.object({
 })
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const authSession = new AuthSessionStorage({ request })
-  const session = await authSession.getSession()
+  const session = await getSession(request)
   if (!session) return redirect("/")
 
   return null
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  const authSession = new AuthSessionStorage({ request })
-  const session = await authSession.getSession()
-  if (!session) return redirect("/")
-
   const bodyResult = FormSchema.safeParse(await request.json())
   if (bodyResult.error) {
     return json({ message: "Invalid OTP. Please check your input and try again." }, { status: 400 })
@@ -42,27 +37,27 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const data = bodyResult.data
 
-  if (session.attempts >= MAX_ATTEMPTS) {
+  try {
+    await logIn({ otp: data.pin, request })
+    return redirect("/dashboard")
+  } catch (error) {
+    if (error instanceof AppError) {
+      return json({ message: error.userMessage, ok: false }, { status: error.statusCode })
+    }
+
     return json(
-      { message: "Maximum attempts reached. Please request a new password." },
-      { status: 400 },
+      {
+        message:
+          "An error occurred while processing your request. Please try again later or contact support if the issue persists.",
+        ok: false,
+      },
+      {
+        status: 500,
+      },
     )
   }
 
-  if (new Date(session.expiresAt).getTime() < Date.now()) {
-    return json(
-      { message: "Your password has expired. Please request a new one." },
-      { status: 400 },
-    )
-  }
-
-  const validPassword = await OTP.compare({ hash: session.otpHash, otp: data.pin })
-  if (!validPassword) {
-    await authSession.increaseAttempts()
-    return json({ message: "Invalid OTP. Please check your input and try again." }, { status: 400 })
-  }
-
-  return (await authSession.deleteSession("/dashboard")).redirect
+  null
 }
 
 export default function Auth() {

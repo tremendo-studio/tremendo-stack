@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ActionFunctionArgs } from "@remix-run/node"
+import { ActionFunctionArgs, redirect } from "@remix-run/node"
 import { json, Link, useActionData, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
 import { eq } from "drizzle-orm"
@@ -23,7 +23,7 @@ import { user as userSchema } from "~/db/schema"
 import { Email, OtpTemplate } from "~/modules/email"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { AuthSessionStorage, OTP } from "../services"
+import { createOTP, createSession, hashOTP } from "../services"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -47,20 +47,23 @@ export async function action({ request }: ActionFunctionArgs) {
     )
 
   const userData = bodyResult.data
-  const otp = new OTP()
-  const authSessionStorage = new AuthSessionStorage({ request })
-  const email = new Email({ subject: "OTP", template: OtpTemplate({ otp: otp.value }) })
+  const otp = createOTP()
+  const email = new Email({ subject: "OTP", template: OtpTemplate({ otp }) })
   const user = await db.select().from(userSchema).where(eq(userSchema.email, userData.email))
 
   try {
     if (!user.length) await db.insert(userSchema).values(userData)
-    const { redirect } = await authSessionStorage.saveSession({
+    const { cookie } = await createSession({
       email: userData.email,
-      otpHash: await otp.hash(),
-      redirectTo: "/auth",
+      otpHash: await hashOTP(otp),
+      request,
     })
     await email.send(userData.email)
-    return redirect
+    return redirect("/auth", {
+      headers: {
+        "Set-Cookie": cookie,
+      },
+    })
   } catch (error) {
     console.debug(error)
     return json(
@@ -85,7 +88,6 @@ export default function SignUp() {
   })
 
   const fetcher = useFetcher()
-
   const errors = !isEmpty(form.formState.errors)
 
   function onSubmit(data: z.infer<typeof FormSchema>) {

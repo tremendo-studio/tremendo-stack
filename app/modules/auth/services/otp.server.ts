@@ -3,22 +3,16 @@ import crypto from "crypto"
 
 const SALT_ROUNDS = 10
 
-export default class OTP {
-  #hashedValue?: string
-  value: string
+export function createOTP(length?: number) {
+  length = length || 6
+  return Array.from({ length }, () => String(crypto.randomInt(0, 10))).join("")
+}
 
-  constructor(length = 6) {
-    this.value = Array.from({ length }, () => String(crypto.randomInt(0, 10))).join("")
-  }
+export async function hashOTP(otp: string, salt?: number) {
+  salt = salt || SALT_ROUNDS
+  return bcrypt.hash(otp, salt)
+}
 
-  static compare({ hash, otp }: { hash: string; otp: string }) {
-    return bcrypt.compare(otp, hash)
-  }
-
-  async hash() {
-    if (!this.#hashedValue) {
-      this.#hashedValue = await bcrypt.hash(this.value, SALT_ROUNDS)
-    }
-    return this.#hashedValue
-  }
+export function compareOTP({ hash, otp }: { hash: string; otp: string }) {
+  return bcrypt.compare(otp, hash)
 }

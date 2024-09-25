@@ -1,2 +1,3 @@
-export { default as AuthSessionStorage } from "./auth-session-storage.server"
-export { default as OTP } from "./otp.server"
+export { logIn, LogInError } from "./login.server"
+export { compareOTP, createOTP, hashOTP } from "./otp.server"
+export { createSession, deleteSession, getSession, updateSession } from "./session-storage.server"

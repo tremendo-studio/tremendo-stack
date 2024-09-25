@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ActionFunctionArgs } from "@remix-run/node"
+import { ActionFunctionArgs, redirect } from "@remix-run/node"
 import { json, Link, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
 import { useForm } from "react-hook-form"
@@ -18,7 +18,7 @@ import { Input } from "~/components/ui/input"
 import { Email, OtpTemplate } from "~/modules/email"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { AuthSessionStorage, OTP } from "../services"
+import { createOTP, createSession, hashOTP } from "../services"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -37,18 +37,21 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   const userData = bodyResult.data
-  const otp = new OTP()
-  const authSession = new AuthSessionStorage({ request })
+  const otp = createOTP()
   const email = new Email({ subject: "OTP", template: OtpTemplate({ otp: otp.value }) })
 
   try {
-    const { redirect } = await authSession.saveSession({
+    const { cookie } = await createSession({
       email: userData.email,
-      otpHash: await otp.hash(),
-      redirectTo: "/auth",
+      otpHash: await hashOTP(otp),
+      request,
     })
     await email.send(userData.email)
-    return redirect
+    return redirect("/auth", {
+      headers: {
+        "Set-Cookie": cookie,
+      },
+    })
   } catch (error) {
     return json(
       {
