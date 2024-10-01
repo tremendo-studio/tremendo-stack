@@ -1,38 +1,37 @@
+import { json } from "@remix-run/node"
+
 const DEFAULT_USER_MESSAGE =
   "An error occurred while processing your request. Please try again later or contact support if the issue persists."
 const DEFAULT_STATUS_CODE = 500
-const DEFAULT_NAME = "UNKNOWN_ERROR"
-const DEFAULT_MESSAGE = "Unknown error"
 
-type ErrorName =
-  | "LOG_IN_INVALID_OTP"
-  | "LOG_IN_MAX_ATTEMPTS"
-  | "LOG_IN_OTP_EXPIRED"
-  | "SESSION_EXPIRED"
-  | "UNKNOWN_ERROR"
-
-type ErrorConstructorArgs = {
-  message?: string
-  name?: ErrorName
-  statusCode?: number
-  userMessage?: string
-}
+type AppErrorExtraArgs = { statusCode?: number; userMessage?: string }
 
 export class AppError extends Error {
   name
   statusCode
   userMessage
 
-  constructor({
-    message = DEFAULT_MESSAGE,
-    name = DEFAULT_NAME,
-    statusCode = DEFAULT_STATUS_CODE,
-    userMessage = DEFAULT_USER_MESSAGE,
-  }: ErrorConstructorArgs) {
+  constructor(message?: string, extraArgs?: AppErrorExtraArgs) {
     super(message)
-    this.userMessage = userMessage
-    this.statusCode = statusCode
-    this.name = name
+    this.userMessage = extraArgs?.userMessage || DEFAULT_USER_MESSAGE
+    this.statusCode = extraArgs?.statusCode || DEFAULT_STATUS_CODE
+    this.name = "AppError"
     Error.captureStackTrace(this, this.constructor)
   }
+}
+
+export function castToError(error: unknown) {
+  return error instanceof AppError ? error : new AppError((error as { message: string })?.message)
+}
+
+export function castToResponse(error: unknown) {
+  return error instanceof AppError
+    ? json({ message: error.userMessage, ok: false }, { status: error.statusCode })
+    : json(
+        {
+          message: DEFAULT_USER_MESSAGE,
+          ok: false,
+        },
+        { status: DEFAULT_STATUS_CODE },
+      )
 }

@@ -16,6 +16,7 @@ import {
 } from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
 import { Email, OtpTemplate } from "~/modules/email"
+import { castToResponse } from "~/utils/error.server"
 
 import { FluidContainer, SubmitButton } from "../components"
 import { createOTP, createSession, hashOTP } from "../services"
@@ -38,7 +39,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const userData = bodyResult.data
   const otp = createOTP()
-  const email = new Email({ subject: "OTP", template: OtpTemplate({ otp: otp.value }) })
+  const email = new Email({ subject: "OTP", template: OtpTemplate({ otp }) })
 
   try {
     const { cookie } = await createSession({
@@ -53,14 +54,7 @@ export async function action({ request }: ActionFunctionArgs) {
       },
     })
   } catch (error) {
-    return json(
-      {
-        message:
-          "An error occurred while processing your request. Please try again later or contact support if the issue persists.",
-        ok: false,
-      },
-      { status: 500 },
-    )
+    return castToResponse(error)
   }
 }
 

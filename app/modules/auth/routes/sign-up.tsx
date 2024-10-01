@@ -21,6 +21,7 @@ import { Input } from "~/components/ui/input"
 import { db } from "~/db"
 import { user as userSchema } from "~/db/schema"
 import { Email, OtpTemplate } from "~/modules/email"
+import { AppError, castToResponse } from "~/utils/error.server"
 
 import { FluidContainer, SubmitButton } from "../components"
 import { createOTP, createSession, hashOTP } from "../services"
@@ -65,15 +66,7 @@ export async function action({ request }: ActionFunctionArgs) {
       },
     })
   } catch (error) {
-    console.debug(error)
-    return json(
-      {
-        message:
-          "An error occurred while processing your request. Please try again later or contact support if the issue persists.",
-        ok: false,
-      },
-      { status: 500 },
-    )
+    return castToResponse(error)
   }
 }
 

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm"
 
 import { db, Db } from "~/db"
 import { authSession } from "~/db/schema"
-import { AppError } from "~/utils/error.server"
+import { AppError, castToError } from "~/utils/error.server"
 
 import { compareOTP } from "./otp.server"
 import { getSession as getSessionDep } from "./session-storage.server"
@@ -22,16 +22,17 @@ type LogInDeps = {
 }
 
 export async function logIn({ maxAge = MAX_AGE, otp, request }: LogInArgs, deps?: LogInDeps) {
-  const { dbClient, getSession } = deps || { dbClient: db, getSession: getSessionDep }
+  const { dbClient = db, getSession = getSessionDep } = deps || {}
   const session = await getSession(request)
 
   try {
     if (new Date(session.expiresAt).getTime() < Date.now())
       throw new AppError({
-        message: "OTP expired",
+        message: "Login OTP has expired",
         name: "LOG_IN_OTP_EXPIRED",
         statusCode: 400,
-        userMessage: "Your password has expired. Please request a new one.",
+        userMessage:
+          "Your one-time password (OTP) has expired. Please request a new OTP to log in.",
       })
 
     const validPassword = await compareOTP({ hash: session.otpHash, otp })
@@ -47,13 +48,13 @@ export async function logIn({ maxAge = MAX_AGE, otp, request }: LogInArgs, deps?
       const maxAttemptsReached = dbSession.loginAttempts >= MAX_ATTEMPTS
 
       throw new AppError({
-        message: maxAttemptsReached ? "Maximum attempts reached" : "Invalid OTP",
-        name: maxAttemptsReached ? "LOG_IN_MAX_ATTEMPTS" : "LOG_IN_INVALID_OTP",
+        message: maxAttemptsReached ? "Maximum login attempts reached" : "Invalid login OTP",
+        name: maxAttemptsReached ? "LOG_IN_MAX_ATTEMPTS_REACHED" : "LOG_IN_INVALID_OTP",
         statusCode: 400,
 
         userMessage: maxAttemptsReached
-          ? "Maximum attempts reached. Please request a new password."
-          : "Invalid OTP. Please check your input and try again.",
+          ? "You have reached the maximum number of attempts. Please request a new OTP to continue."
+          : "The OTP you entered is invalid. Please check your input and try again.",
       })
     }
 
@@ -66,7 +67,6 @@ export async function logIn({ maxAge = MAX_AGE, otp, request }: LogInArgs, deps?
 
     return dbSession
   } catch (error) {
-    if (error instanceof AppError) throw error
-    throw new AppError({})
+    throw castToError(error)
   }
 }

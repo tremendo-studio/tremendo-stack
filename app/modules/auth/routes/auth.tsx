@@ -9,7 +9,7 @@ import { z } from "zod"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "~/components/ui/form"
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "~/components/ui/input-otp"
-import { AppError } from "~/utils/error.server"
+import { AppError, castToResponse } from "~/utils/error.server"
 
 import { FluidContainer, SubmitButton } from "../components"
 import { getSession } from "../services"
@@ -32,7 +32,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
   const bodyResult = FormSchema.safeParse(await request.json())
   if (bodyResult.error) {
-    return json({ message: "Invalid OTP. Please check your input and try again." }, { status: 400 })
+    return json(
+      { message: "Invalid OTP. Please check your input and try again.", ok: false },
+      { status: 400 },
+    )
   }
 
   const data = bodyResult.data
@@ -41,23 +44,7 @@ export async function action({ request }: ActionFunctionArgs) {
     await logIn({ otp: data.pin, request })
     return redirect("/dashboard")
   } catch (error) {
-    if (error instanceof AppError) {
-      return json({ message: error.userMessage, ok: false }, { status: error.statusCode })
-    }
-
-    return json(
-      {
-        message:
-          "An error occurred while processing your request. Please try again later or contact support if the issue persists.",
-        ok: false,
-      },
-      {
-        status: 500,
-      },
-    )
-  }
-
-  null
+    return castToResponse(error)
 }
 
 export default function Auth() {

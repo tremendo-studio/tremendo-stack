@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm"
 
 import { db, Db } from "~/db"
 import { authSession } from "~/db/schema"
+import { AppError, castToError } from "~/utils/error.server"
 
 import cookieSessionStorage from "./cookie-session-storage.server"
 
@@ -15,32 +16,38 @@ type CreateSessionArgs = {
   request: Request
 }
 
-type CreateSessionDeps = {
+type SessionStorageDeps = {
   cookieStorage: typeof cookieSessionStorage
   dbClient: Db
 }
 
 export async function createSession(
   { email, maxAge = AUTH_SESSION_MAX_AGE, otpHash, request }: CreateSessionArgs,
-  deps?: CreateSessionDeps,
+  deps?: SessionStorageDeps,
 ) {
   const { cookieStorage = cookieSessionStorage, dbClient = db } = deps || {}
 
-  const dbSession = await dbClient
-    .insert(authSession)
-    .values({
-      expiresAt: new Date(Date.now() + maxAge * 1000).toISOString(),
-      otpHash: otpHash,
-      userEmail: email,
-    })
-    .returning()
+  try {
+    const dbSession = (
+      await dbClient
+        .insert(authSession)
+        .values({
+          expiresAt: new Date(Date.now() + maxAge * 1000).toISOString(),
+          otpHash: otpHash,
+          userEmail: email,
+        })
+        .returning()
+    )[0]
 
-  const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
-  cookieSession.set(AUTH_SESSION_KEY, dbSession[0].id)
+    const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
+    cookieSession.set(AUTH_SESSION_KEY, dbSession.id)
 
-  return {
-    cookie: await cookieStorage.commitSession(cookieSession),
-    session: dbSession,
+    return {
+      cookie: await cookieStorage.commitSession(cookieSession),
+      session: dbSession,
+    }
+  } catch (error) {
+    throw castToError(error)
   }
 }
 
@@ -48,50 +55,45 @@ type DeleteSessionArgs = {
   request: Request
 }
 
-type DeleteSessionDeps = {
-  cookieStorage: typeof cookieSessionStorage
-  dbClient: Db
-}
-
-export async function deleteSession({ request }: DeleteSessionArgs, deps?: DeleteSessionDeps) {
+export async function deleteSession({ request }: DeleteSessionArgs, deps?: SessionStorageDeps) {
   const { cookieStorage = cookieSessionStorage, dbClient = db } = deps || {}
 
-  const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
-  const sessionId = cookieSession.get(AUTH_SESSION_KEY)
-  if (!sessionId) throw Error()
+  try {
+    const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
+    const sessionId = cookieSession.get(AUTH_SESSION_KEY)
+    if (!sessionId) {
+      throw new AppError("Session ID is missing cookie")
+    }
 
-  const dbSession = await dbClient
-    .update(authSession)
-    .set({ deleted: true })
-    .where(eq(authSession.id, sessionId))
-    .returning()
+    const dbSession = await dbClient
+      .update(authSession)
+      .set({ deleted: true })
+      .where(eq(authSession.id, sessionId))
+      .returning()
 
-  return {
-    cookie: await cookieStorage.destroySession(cookieSession),
-    session: dbSession,
+    return {
+      cookie: await cookieStorage.destroySession(cookieSession),
+      session: dbSession,
+    }
+  } catch (error) {
+    throw castToError(error)
   }
 }
 
 type GetSessionArgs = Request
 
-type GetSessionDeps = {
-  cookieStorage: typeof cookieSessionStorage
-  dbClient: Db
-}
-
-export async function getSession(request: GetSessionArgs, deps?: GetSessionDeps) {
+export async function getSession(request: GetSessionArgs, deps?: SessionStorageDeps) {
   const { cookieStorage = cookieSessionStorage, dbClient = db } = deps || {}
 
   const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
   const sessionId = cookieSession.get("sessionId")
-  if (!sessionId) throw Error()
+  if (!sessionId) return
 
-  const dbSession = (
-    await dbClient.select().from(authSession).where(eq(authSession.id, sessionId))
-  )[0]
-  if (!dbSession) throw Error()
-
-  return dbSession
+  try {
+    return (await dbClient.select().from(authSession).where(eq(authSession.id, sessionId)))[0]
+  } catch (error) {
+    throw castToError(error)
+  }
 }
 
 type UpdateSessionArgs = {
@@ -101,24 +103,25 @@ type UpdateSessionArgs = {
   request: Request
 }
 
-type UpdateSessionDeps = {
-  cookieStorage: typeof cookieSessionStorage
-  dbClient: Db
-}
-
 export async function updateSession(
   { expiresAt, loggedIn, loginAttempts, request }: UpdateSessionArgs,
-  deps?: UpdateSessionDeps,
+  deps?: SessionStorageDeps,
 ) {
   const { cookieStorage = cookieSessionStorage, dbClient = db } = deps || {}
 
-  const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
-  const sessionId = cookieSession.get("sessionId")
-  if (!sessionId) throw Error("Invalid session")
+  try {
+    const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
+    const sessionId = cookieSession.get("sessionId")
+    if (!sessionId) {
+      throw new AppError("Session ID is missing in cookie")
+    }
 
-  const dbSession = await dbClient
-    .update(authSession)
-    .set({ expiresAt, loggedIn, loginAttempts })
-    .returning()
-  return dbSession[0]
+    const dbSession = await dbClient
+      .update(authSession)
+      .set({ expiresAt, loggedIn, loginAttempts })
+      .returning()
+    return dbSession[0]
+  } catch (error) {
+    throw castToError(error)
+  }
 }
