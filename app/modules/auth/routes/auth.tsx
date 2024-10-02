@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
-import { json, Link, redirect, useFetcher } from "@remix-run/react"
+import { Link, redirect, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
@@ -13,7 +13,7 @@ import { mapToResponse } from "~/utils/app-error.server"
 
 import { FluidContainer, SubmitButton } from "../components"
 import { getSession } from "../services"
-import { auth } from "../services/auth.server"
+import { authenticate } from "../services/authentication.server"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -25,14 +25,13 @@ const FormSchema = z.object({
 export async function loader({ request }: LoaderFunctionArgs) {
   const session = await getSession(request)
   if (!session) return redirect("/")
-
   return null
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   try {
-    const data = FormSchema.parse(await request.json())
-    await auth({ otp: data.otp, request })
+    const { otp } = FormSchema.parse(await request.json())
+    await authenticate({ otp, request })
     return redirect("/dashboard")
   } catch (error) {
     return mapToResponse(error)

@@ -58,13 +58,13 @@ type DeleteSessionArgs = {
 export async function deleteSession({ request }: DeleteSessionArgs, deps?: SessionStorageDeps) {
   const { cookieStorage = cookieSessionStorage, dbClient = db } = deps || {}
 
-  try {
-    const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
-    const sessionId = cookieSession.get(AUTH_SESSION_KEY)
-    if (!sessionId) {
-      throw new AppError("Session ID is missing cookie", { statusCode: 400 })
-    }
+  const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
+  const sessionId = cookieSession.get(AUTH_SESSION_KEY)
+  if (!sessionId) {
+    throw new AppError("Session ID is missing cookie", { statusCode: 400 })
+  }
 
+  try {
     const dbSession = await dbClient
       .update(authSession)
       .set({ deleted: true })

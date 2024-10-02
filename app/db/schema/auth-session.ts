@@ -3,6 +3,10 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { createInsertSchema } from "drizzle-zod"
 
 const authSession = sqliteTable("auth_sessions", {
+  authAttempts: integer("auth_attempts")
+    .notNull()
+    .$default(() => 0),
+  authenticated: integer("authenticated", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at")
     .notNull()
     .$default(() => new Date().toISOString()),
@@ -11,10 +15,6 @@ const authSession = sqliteTable("auth_sessions", {
   id: text("id")
     .$default(() => createId())
     .primaryKey(),
-  loggedIn: integer("logged_in", { mode: "boolean" }).notNull().default(false),
-  loginAttempts: integer("login_attempts")
-    .notNull()
-    .$default(() => 0),
   otpHash: text("otp_hash").notNull(),
   userEmail: text("user_email").notNull(),
 })

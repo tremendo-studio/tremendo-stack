@@ -38,7 +38,7 @@ export function mapToResponse(error: unknown) {
       response = json(
         {
           fieldErrors: error.flatten().fieldErrors,
-          message: "Invalid form data. Please check your input and try again.",
+          message: "Invalid data. Please check your input and try again.",
           ok: false,
         },
         {

@@ -22,7 +22,10 @@ type LogInDeps = {
   getSession: typeof getSessionDep
 }
 
-export async function auth({ maxAge = MAX_AGE, otp, request }: LogInArgs, deps?: LogInDeps) {
+export async function authenticate(
+  { maxAge = MAX_AGE, otp, request }: LogInArgs,
+  deps?: LogInDeps,
+) {
   const { compare = compareOTP, dbClient = db, getSession = getSessionDep } = deps || {}
 
   const session = await getSession(request)
@@ -40,12 +43,12 @@ export async function auth({ maxAge = MAX_AGE, otp, request }: LogInArgs, deps?:
       const dbSession = (
         await dbClient
           .update(authSession)
-          .set({ loginAttempts: session.loginAttempts + 1 })
+          .set({ authAttempts: session.authAttempts + 1 })
           .where(eq(authSession.id, session.id))
           .returning()
       )[0]
 
-      const maxAttemptsReached = dbSession.loginAttempts >= MAX_ATTEMPTS
+      const maxAttemptsReached = dbSession.authAttempts >= MAX_ATTEMPTS
 
       throw new AuthError(
         maxAttemptsReached ? "Maximum login attempts reached" : "Invalid login OTP",
@@ -61,7 +64,7 @@ export async function auth({ maxAge = MAX_AGE, otp, request }: LogInArgs, deps?:
     const dbSession = (
       await dbClient
         .update(authSession)
-        .set({ expiresAt: new Date(Date.now() + maxAge * 1000).toISOString(), loggedIn: true })
+        .set({ authenticated: true, expiresAt: new Date(Date.now() + maxAge * 1000).toISOString() })
         .returning()
     )[0]
 
