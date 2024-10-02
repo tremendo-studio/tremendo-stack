@@ -1,24 +1,24 @@
 import { eq } from "drizzle-orm"
 
-import { db, Db } from "~/db"
+import { Db, db } from "~/db"
 import { authSession } from "~/db/schema"
-import { AppError, castToError } from "~/utils/error.server"
+import { AppError, mapToError } from "~/utils/app-error.server"
 
 import cookieSessionStorage from "./cookie-session-storage.server"
 
 const AUTH_SESSION_KEY = "sessionId"
 const AUTH_SESSION_MAX_AGE = 15 * 60
 
+type SessionStorageDeps = {
+  cookieStorage: typeof cookieSessionStorage
+  dbClient: Db
+}
+
 type CreateSessionArgs = {
   email: string
   maxAge?: number
   otpHash: string
   request: Request
-}
-
-type SessionStorageDeps = {
-  cookieStorage: typeof cookieSessionStorage
-  dbClient: Db
 }
 
 export async function createSession(
@@ -47,7 +47,7 @@ export async function createSession(
       session: dbSession,
     }
   } catch (error) {
-    throw castToError(error)
+    throw mapToError(error)
   }
 }
 
@@ -62,7 +62,7 @@ export async function deleteSession({ request }: DeleteSessionArgs, deps?: Sessi
     const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
     const sessionId = cookieSession.get(AUTH_SESSION_KEY)
     if (!sessionId) {
-      throw new AppError("Session ID is missing cookie")
+      throw new AppError("Session ID is missing cookie", { statusCode: 400 })
     }
 
     const dbSession = await dbClient
@@ -73,30 +73,31 @@ export async function deleteSession({ request }: DeleteSessionArgs, deps?: Sessi
 
     return {
       cookie: await cookieStorage.destroySession(cookieSession),
-      session: dbSession,
+      session: dbSession[0],
     }
   } catch (error) {
-    throw castToError(error)
+    throw mapToError(error)
   }
 }
 
-type GetSessionArgs = Request
+export type GetSessionArgs = Request
 
 export async function getSession(request: GetSessionArgs, deps?: SessionStorageDeps) {
   const { cookieStorage = cookieSessionStorage, dbClient = db } = deps || {}
 
   const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
-  const sessionId = cookieSession.get("sessionId")
+  const sessionId = cookieSession.get(AUTH_SESSION_KEY)
   if (!sessionId) return
 
   try {
-    return (await dbClient.select().from(authSession).where(eq(authSession.id, sessionId)))[0]
+    const dbSession = await dbClient.select().from(authSession).where(eq(authSession.id, sessionId))
+    return dbSession[0]
   } catch (error) {
-    throw castToError(error)
+    throw mapToError(error)
   }
 }
 
-type UpdateSessionArgs = {
+export type UpdateSessionArgs = {
   expiresAt?: string
   loggedIn?: boolean
   loginAttempts?: number
@@ -109,19 +110,19 @@ export async function updateSession(
 ) {
   const { cookieStorage = cookieSessionStorage, dbClient = db } = deps || {}
 
-  try {
-    const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
-    const sessionId = cookieSession.get("sessionId")
-    if (!sessionId) {
-      throw new AppError("Session ID is missing in cookie")
-    }
+  const cookieSession = await cookieStorage.getSession(request.headers.get("Cookie"))
+  const sessionId = cookieSession.get(AUTH_SESSION_KEY)
+  if (!sessionId) {
+    throw new AppError("Session ID is missing cookie", { statusCode: 400 })
+  }
 
+  try {
     const dbSession = await dbClient
       .update(authSession)
       .set({ expiresAt, loggedIn, loginAttempts })
       .returning()
     return dbSession[0]
   } catch (error) {
-    throw castToError(error)
+    throw mapToError(error)
   }
 }

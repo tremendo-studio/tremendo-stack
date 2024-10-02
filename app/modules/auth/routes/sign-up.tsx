@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ActionFunctionArgs, redirect } from "@remix-run/node"
-import { json, Link, useActionData, useFetcher } from "@remix-run/react"
+import { Link, useActionData, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
 import { eq } from "drizzle-orm"
 import { useEffect } from "react"
@@ -21,7 +21,7 @@ import { Input } from "~/components/ui/input"
 import { db } from "~/db"
 import { user as userSchema } from "~/db/schema"
 import { Email, OtpTemplate } from "~/modules/email"
-import { AppError, castToResponse } from "~/utils/error.server"
+import { mapToResponse } from "~/utils/app-error.server"
 
 import { FluidContainer, SubmitButton } from "../components"
 import { createOTP, createSession, hashOTP } from "../services"
@@ -40,33 +40,27 @@ const FormSchema = z.object({
 })
 
 export async function action({ request }: ActionFunctionArgs) {
-  const bodyResult = FormSchema.safeParse(await request.json())
-  if (bodyResult.error)
-    return json(
-      { message: "Invalid form data. Please check your input and try again.", ok: false },
-      { status: 400 },
-    )
-
-  const userData = bodyResult.data
-  const otp = createOTP()
-  const email = new Email({ subject: "OTP", template: OtpTemplate({ otp }) })
-  const user = await db.select().from(userSchema).where(eq(userSchema.email, userData.email))
-
   try {
-    if (!user.length) await db.insert(userSchema).values(userData)
+    const body = FormSchema.parse(await request.json())
+    const otp = createOTP()
+    // const email = new Email({ subject: "OTP", template: OtpTemplate({ otp }) })
+    const user = await db.select().from(userSchema).where(eq(userSchema.email, body.email))
+    if (!user.length) await db.insert(userSchema).values(body)
     const { cookie } = await createSession({
-      email: userData.email,
-      otpHash: await hashOTP(otp),
+      email: body.email,
+      otpHash: await hashOTP({ otp }),
       request,
     })
-    await email.send(userData.email)
+    // await email.send(userData.email)
+    console.debug("OTP 🎰: ", otp)
     return redirect("/auth", {
       headers: {
         "Set-Cookie": cookie,
       },
     })
   } catch (error) {
-    return castToResponse(error)
+    console.debug(error.userMessage)
+    return mapToResponse(error)
   }
 }
 
@@ -78,6 +72,7 @@ export default function SignUp() {
       email: "",
     },
     resolver: zodResolver(FormSchema),
+    shouldUseNativeValidation: false,
   })
 
   const fetcher = useFetcher()

@@ -16,7 +16,7 @@ import {
 } from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
 import { Email, OtpTemplate } from "~/modules/email"
-import { castToResponse } from "~/utils/error.server"
+import { mapToResponse } from "~/utils/app-error.server"
 
 import { FluidContainer, SubmitButton } from "../components"
 import { createOTP, createSession, hashOTP } from "../services"
@@ -44,7 +44,7 @@ export async function action({ request }: ActionFunctionArgs) {
   try {
     const { cookie } = await createSession({
       email: userData.email,
-      otpHash: await hashOTP(otp),
+      otpHash: await hashOTP({ otp }),
       request,
     })
     await email.send(userData.email)
@@ -54,7 +54,7 @@ export async function action({ request }: ActionFunctionArgs) {
       },
     })
   } catch (error) {
-    return castToResponse(error)
+    return mapToResponse(error)
   }
 }
 
@@ -67,7 +67,6 @@ export default function SignIn() {
   })
 
   const fetcher = useFetcher()
-
   const errors = !isEmpty(form.formState.errors)
 
   function onSubmit(data: z.infer<typeof FormSchema>) {
