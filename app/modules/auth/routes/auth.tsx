@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
+import { ActionFunctionArgs, json, LoaderFunctionArgs } from "@remix-run/node"
 import { Link, redirect, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
 import { useEffect } from "react"
@@ -12,8 +12,7 @@ import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "~/comp
 import { mapToResponse } from "~/utils/app-error.server"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { getSession } from "../services"
-import { authenticate } from "../services/authentication.server"
+import { authenticate, getSession } from "../services"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -30,7 +29,21 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export async function action({ request }: ActionFunctionArgs) {
   try {
-    const { otp } = FormSchema.parse(await request.json())
+    const result = FormSchema.safeParse(await request.json())
+    if (result.error) {
+      return json(
+        {
+          fieldErrors: result.error.flatten().fieldErrors,
+          message: "Invalid data. Please check your input and try again.",
+          ok: false,
+        },
+        {
+          status: 400,
+        },
+      )
+    }
+
+    const { otp } = result.data
     await authenticate({ otp, request })
     return redirect("/dashboard")
   } catch (error) {

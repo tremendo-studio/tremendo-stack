@@ -50,6 +50,8 @@
     "lucide-react": "^0.439.0",
     "morgan": "^1.10.0",
     "next-themes": "^0.3.0",
+    "pino": "^9.4.0",
+    "pino-pretty": "^11.2.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.53.0",

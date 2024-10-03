@@ -59,7 +59,6 @@ export async function action({ request }: ActionFunctionArgs) {
       },
     })
   } catch (error) {
-    console.debug(error.userMessage)
     return mapToResponse(error)
   }
 }

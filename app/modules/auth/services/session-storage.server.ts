@@ -97,6 +97,8 @@ export async function getSession(request: GetSessionArgs, deps?: SessionStorageD
   }
 }
 
+export type GetSession = typeof getSession
+
 export type UpdateSessionArgs = {
   expiresAt?: string
   loggedIn?: boolean
