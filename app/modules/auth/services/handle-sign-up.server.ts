@@ -7,11 +7,8 @@ import { InsertUserSchema, userSchema } from "~/db/schema"
 import { log } from "~/logger.server"
 import { serverInternalError } from "~/utils/server-internal-error.server"
 
+import { CookieStorage, CreatePin, HashPin, InsertOneTimePassword } from "."
 import { OTP_MAX_AGE } from "../config"
-import { CookieStorage } from "./cookie-session-storage.server"
-import { CreatePin } from "./create-pin.server"
-import { HashPin } from "./hash-pin.server"
-import { InsertOneTimePassword } from "./insert-one-time-password.server"
 
 type HandleSignUpArgs = {
   request: Request

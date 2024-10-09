@@ -7,11 +7,8 @@ import { userSchema } from "~/db/schema"
 import { log } from "~/logger.server"
 import { serverInternalError } from "~/utils/server-internal-error.server"
 
+import { CookieStorage, CreatePin, HashPin, InsertOneTimePassword } from "."
 import { OTP_MAX_AGE } from "../config"
-import { CookieStorage } from "./cookie-session-storage.server"
-import { CreatePin } from "./create-pin.server"
-import { HashPin } from "./hash-pin.server"
-import { InsertOneTimePassword } from "./insert-one-time-password.server"
 
 type HandleSignInArgs = {
   request: Request
@@ -43,10 +40,10 @@ export async function HandleSignIn(args: HandleSignInArgs, deps?: HandleSignInDe
 
   try {
     await insertOneTimePassword({
+      email: userEmail,
       expiresAt: new Date(Date.now() + OTP_MAX_AGE * 1000).toISOString(),
       hash: pinHash,
       id: otpId,
-      userEmail: userEmail,
     })
   } catch (error) {
     log.error(`Failed to insert OTP: ${error instanceof Error ? error.message : "Unknown error"}`)
