@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm"
 
 import { DB } from "~/db"
-import { oneTimePassword, SelectOneTimePasswordSchema } from "~/db/schema"
+import { oneTimePasswordSchema, SelectOneTimePasswordSchema } from "~/db/schema"
 import { log } from "~/logger.server"
 
 export type UpdateSessionArgs = SelectOneTimePasswordSchema
@@ -16,9 +16,9 @@ export async function UpdateOneTimePassword(args: UpdateSessionArgs, deps?: Dele
 
   const otp = (
     await db
-      .update(oneTimePassword)
+      .update(oneTimePasswordSchema)
       .set({ expiresAt, used, validateAttempts })
-      .where(eq(oneTimePassword.id, id))
+      .where(eq(oneTimePasswordSchema.id, id))
       .returning()
   )[0]
 

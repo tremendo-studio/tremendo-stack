@@ -8,7 +8,7 @@ type SessionData = {
 export const CookieStorage = createCookieSessionStorage<SessionData>({
   cookie: {
     httpOnly: true,
-    name: "auth_session",
+    name: "session",
     path: "/",
     sameSite: "lax",
     secrets: ["secret"],

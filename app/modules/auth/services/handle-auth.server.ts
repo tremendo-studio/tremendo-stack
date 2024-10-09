@@ -33,8 +33,9 @@ export async function HandleAuth(args: HandleAuthArgs, deps?: HandleAuthDeps) {
     updateOneTimePassword = UpdateOneTimePassword,
   } = deps || {}
 
-  if (new Date(oneTimePassword.expiresAt).getTime() < Date.now()) {
-    log.info({ oneTimePassword }, "one-time password expired:")
+  const otpExpired = new Date(oneTimePassword.expiresAt).getTime() < Date.now()
+  if (otpExpired) {
+    log.error({ oneTimePassword }, "One-time password expired:")
     return badRequest(
       "Your one-time password has expired. Please request a new password to log in.",
     )
@@ -42,7 +43,7 @@ export async function HandleAuth(args: HandleAuthArgs, deps?: HandleAuthDeps) {
 
   const maxAttemptsReached = oneTimePassword.validateAttempts >= maxAttempts
   if (maxAttemptsReached) {
-    log.info({ oneTimePassword }, "Maximum login attempts reached:")
+    log.error({ oneTimePassword }, "Maximum login attempts reached:")
     return badRequest(
       "You have reached the maximum number of attempts. Please request a new one-time password to continue.",
     )
@@ -50,13 +51,14 @@ export async function HandleAuth(args: HandleAuthArgs, deps?: HandleAuthDeps) {
 
   const isValid = await checkPin({ hash: oneTimePassword.hash, pin })
   if (!isValid) {
+    log.error({ oneTimePassword }, "Invalid login one-time password")
+
     try {
       await updateOneTimePassword({
         ...oneTimePassword,
         validateAttempts: oneTimePassword.validateAttempts + 1,
       })
 
-      log.info({ oneTimePassword }, "Invalid login one-time password")
       return badRequest(
         "The one-time password you entered is invalid. Please check your input and try again.",
       )

@@ -49,7 +49,10 @@ export async function HandleSignUp(args: HandleSignUpArgs, deps?: HandleSignUpDe
       id: otpId,
     })
   } catch (error) {
-    log.error(`Failed to insert OTP: ${error instanceof Error ? error.message : "Unknown error"}`)
+    log.error(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      "Failed to insert one-time password:",
+    )
     return serverInternalError()
   }
 
