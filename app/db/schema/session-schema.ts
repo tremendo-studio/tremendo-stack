@@ -3,7 +3,7 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { createInsertSchema, createSelectSchema } from "drizzle-zod"
 import { z } from "zod"
 
-export const userSession = sqliteTable("user_session", {
+export const sessionSchema = sqliteTable("session", {
   createdAt: text("created_at")
     .notNull()
     .$default(() => new Date().toISOString()),
@@ -15,8 +15,8 @@ export const userSession = sqliteTable("user_session", {
     .primaryKey(),
 })
 
-export const insertUserSessionSchema = createInsertSchema(userSession)
-export const selectUserSchema = createSelectSchema(userSession)
+export const insertSessionSchema = createInsertSchema(sessionSchema)
+export const selectSessionSchema = createSelectSchema(sessionSchema)
 
-export type InsertUserSessionSchema = z.infer<typeof insertUserSessionSchema>
-export type SelectUserSessionSchema = z.infer<typeof selectUserSchema>
+export type InsertSessionSchema = z.infer<typeof insertSessionSchema>
+export type SelectSessionSchema = z.infer<typeof selectSessionSchema>

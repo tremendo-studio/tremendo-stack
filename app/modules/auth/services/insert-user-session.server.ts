@@ -1,19 +1,19 @@
 import { DB } from "~/db"
-import { InsertUserSessionSchema, userSession } from "~/db/schema"
+import { InsertSessionSchema, sessionSchema } from "~/db/schema"
 import { log } from "~/logger.server"
 
-type InsertUserSessionArgs = InsertUserSessionSchema
+type InsertSessionArgs = InsertSessionSchema
 
-type InsertUserSessionDeps = {
+type InsertSessionDeps = {
   db: DB
 }
 
-export async function InsertUserSession(args: InsertUserSessionArgs, deps?: InsertUserSessionDeps) {
+export async function InsertSession(args: InsertSessionArgs, deps?: InsertSessionDeps) {
   const { db = DB } = deps || {}
 
   const session = (
     await db
-      .insert(userSession)
+      .insert(sessionSchema)
       .values({ ...args })
       .returning()
   )[0]
@@ -22,4 +22,4 @@ export async function InsertUserSession(args: InsertUserSessionArgs, deps?: Inse
   return session
 }
 
-export type InsertUserSession = typeof InsertUserSession
+export type InsertSession = typeof InsertSession

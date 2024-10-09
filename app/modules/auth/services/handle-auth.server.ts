@@ -5,7 +5,7 @@ import { log } from "~/logger.server"
 import { badRequest } from "~/utils/bad-request.server"
 import { serverInternalError } from "~/utils/server-internal-error.server"
 
-import { CookieStorage, InsertUserSession, UpdateOneTimePassword } from "."
+import { CookieStorage, InsertSession, UpdateOneTimePassword } from "."
 import { OTP_KEY, OTP_MAX_ATTEMPTS, USER_SESSION_KEY, USER_SESSION_MAX_AGE } from "../config"
 import { CheckPin } from "./check-pin.server"
 
@@ -19,7 +19,7 @@ type HandleAuthArgs = {
 type HandleAuthDeps = {
   checkPin: CheckPin
   cookieStorage: CookieStorage
-  insertUserSession: InsertUserSession
+  insertSession: InsertSession
   updateOneTimePassword: UpdateOneTimePassword
   updateOtp: UpdateOneTimePassword
 }
@@ -29,7 +29,7 @@ export async function HandleAuth(args: HandleAuthArgs, deps?: HandleAuthDeps) {
   const {
     checkPin = CheckPin,
     cookieStorage = CookieStorage,
-    insertUserSession = InsertUserSession,
+    insertSession = InsertSession,
     updateOneTimePassword = UpdateOneTimePassword,
   } = deps || {}
 
@@ -80,7 +80,7 @@ export async function HandleAuth(args: HandleAuthArgs, deps?: HandleAuthDeps) {
   }
 
   try {
-    const session = await insertUserSession({
+    const session = await insertSession({
       email: oneTimePassword.userEmail,
       expiresAt: new Date(USER_SESSION_MAX_AGE * 1000).toISOString(),
     })
