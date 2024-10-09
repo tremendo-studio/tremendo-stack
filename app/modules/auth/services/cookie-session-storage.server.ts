@@ -1,10 +1,11 @@
 import { createCookieSessionStorage } from "@remix-run/node"
 
 type SessionData = {
+  otpId: string
   sessionId: string
 }
 
-const cookieSessionStorage = createCookieSessionStorage<SessionData>({
+export const CookieStorage = createCookieSessionStorage<SessionData>({
   cookie: {
     httpOnly: true,
     name: "auth_session",
@@ -15,4 +16,4 @@ const cookieSessionStorage = createCookieSessionStorage<SessionData>({
   },
 })
 
-export default cookieSessionStorage
+export type CookieStorage = typeof CookieStorage

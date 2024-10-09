@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ActionFunctionArgs, redirect } from "@remix-run/node"
+import { ActionFunctionArgs } from "@remix-run/node"
 import { json, Link, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
 import { useForm } from "react-hook-form"
@@ -15,11 +15,10 @@ import {
   FormMessage,
 } from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
-import { Email, OtpTemplate } from "~/modules/email"
-import { mapToResponse } from "~/utils/app-error.server"
+import { validateSchema } from "~/utils/validate-schema.server"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { createOTP, createSession, hashOTP } from "../services"
+import { HandleSignIn } from "../services"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -28,34 +27,13 @@ const FormSchema = z.object({
     .email({ message: "The email address format is invalid." }),
 })
 
+type FormType = typeof FormSchema.shape
+
 export async function action({ request }: ActionFunctionArgs) {
-  const bodyResult = FormSchema.safeParse(await request.json())
-  if (bodyResult.error) {
-    return json(
-      { message: "Invalid form data. Please check your input and try again." },
-      { status: 400 },
-    )
-  }
+  const result = validateSchema<FormType>({ body: await request.json(), schema: FormSchema })
+  if (!result.ok) return result.response
 
-  const userData = bodyResult.data
-  const otp = createOTP()
-  const email = new Email({ subject: "OTP", template: OtpTemplate({ otp }) })
-
-  try {
-    const { cookie } = await createSession({
-      email: userData.email,
-      otpHash: await hashOTP({ otp }),
-      request,
-    })
-    await email.send(userData.email)
-    return redirect("/auth", {
-      headers: {
-        "Set-Cookie": cookie,
-      },
-    })
-  } catch (error) {
-    return mapToResponse(error)
-  }
+  return await HandleSignIn({ request, userEmail: result.data.email })
 }
 
 export default function SignIn() {

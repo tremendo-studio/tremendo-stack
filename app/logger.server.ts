@@ -1,6 +1,6 @@
-import pino from "pino"
+import logger from "pino"
 
-export const logger = pino({
+export const log = logger({
   transport: {
     options: {
       colorize: true,

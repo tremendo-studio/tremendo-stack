@@ -1,2 +1,3 @@
-export { default as authSession, insertAuthSessionSchema } from "./auth-session"
-export { default as user, insertUserSchema } from "./user"
+export * from "./one-time-password"
+export * from "./user-schema"
+export * from "./user-session"

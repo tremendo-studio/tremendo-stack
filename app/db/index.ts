@@ -11,5 +11,5 @@ export const client = createClient({
   url: env.DB_URL,
 })
 
-export const db = drizzle(client)
-export type Db = typeof db
+export const DB = drizzle(client)
+export type DB = typeof DB

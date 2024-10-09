@@ -1,8 +1,9 @@
 import { createId } from "@paralleldrive/cuid2"
 import { sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { createInsertSchema } from "drizzle-zod"
+import { z } from "zod"
 
-const user = sqliteTable("users", {
+export const userSchema = sqliteTable("user", {
   createdAt: text("created_at")
     .notNull()
     .$default(() => new Date().toISOString()),
@@ -17,6 +18,6 @@ const user = sqliteTable("users", {
     .$default(() => new Date().toISOString()),
 })
 
-export default user
+export const insertUserSchema = createInsertSchema(userSchema)
 
-export const insertUserSchema = createInsertSchema(user)
+export type InsertUserSchema = z.infer<typeof insertUserSchema>

@@ -7,7 +7,7 @@ export default async function seed(db: Db) {
   await Promise.all(
     users.map(async (user) => {
       await db
-        .insert(schema.user)
+        .insert(schema.userSchema)
         .values({
           ...user,
         })

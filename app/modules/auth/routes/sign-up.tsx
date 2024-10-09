@@ -1,8 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ActionFunctionArgs, redirect } from "@remix-run/node"
+import { ActionFunctionArgs } from "@remix-run/node"
 import { Link, useActionData, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
-import { eq } from "drizzle-orm"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
@@ -18,13 +17,10 @@ import {
   FormMessage,
 } from "~/components/ui/form"
 import { Input } from "~/components/ui/input"
-import { db } from "~/db"
-import { user as userSchema } from "~/db/schema"
-import { Email, OtpTemplate } from "~/modules/email"
-import { mapToResponse } from "~/utils/app-error.server"
+import { validateSchema } from "~/utils/validate-schema.server"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { createOTP, createSession, hashOTP } from "../services"
+import { HandleSignUp } from "../services"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -39,28 +35,13 @@ const FormSchema = z.object({
     .min(2, { message: "First name must be at least 2 characters long." }),
 })
 
+type FormType = typeof FormSchema.shape
+
 export async function action({ request }: ActionFunctionArgs) {
-  try {
-    const body = FormSchema.parse(await request.json())
-    const otp = createOTP()
-    // const email = new Email({ subject: "OTP", template: OtpTemplate({ otp }) })
-    const user = await db.select().from(userSchema).where(eq(userSchema.email, body.email))
-    if (!user.length) await db.insert(userSchema).values(body)
-    const { cookie } = await createSession({
-      email: body.email,
-      otpHash: await hashOTP({ otp }),
-      request,
-    })
-    // await email.send(userData.email)
-    console.debug("OTP 🎰: ", otp)
-    return redirect("/auth", {
-      headers: {
-        "Set-Cookie": cookie,
-      },
-    })
-  } catch (error) {
-    return mapToResponse(error)
-  }
+  const result = validateSchema<FormType>({ body: await request.json(), schema: FormSchema })
+  if (!result.ok) return result.response
+
+  return await HandleSignUp({ request, userData: result.data })
 }
 
 export default function SignUp() {
