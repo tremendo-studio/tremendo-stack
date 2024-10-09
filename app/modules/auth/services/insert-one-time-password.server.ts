@@ -1,5 +1,5 @@
 import { DB } from "~/db"
-import { InsertOneTimePasswordSchema, oneTimePassword } from "~/db/schema"
+import { InsertOneTimePasswordSchema, oneTimePasswordSchema } from "~/db/schema"
 import { log } from "~/logger.server"
 
 type InsertOneTimePasswordArgs = InsertOneTimePasswordSchema
@@ -14,15 +14,15 @@ export async function InsertOneTimePassword(
 ) {
   const { db = DB } = deps || {}
 
-  const session = (
+  const oneTimePassword = (
     await db
-      .insert(oneTimePassword)
+      .insert(oneTimePasswordSchema)
       .values({ ...args })
       .returning()
   )[0]
 
-  log.info(`OTP inserted: Email - ${session.userEmail}`)
-  return session
+  log.info(`OTP inserted: Email - ${oneTimePassword.email}`)
+  return oneTimePassword
 }
 
 export type InsertOneTimePassword = typeof InsertOneTimePassword

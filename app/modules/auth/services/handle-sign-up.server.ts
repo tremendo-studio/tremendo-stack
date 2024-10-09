@@ -3,7 +3,7 @@ import { redirect } from "@remix-run/node"
 import { eq } from "drizzle-orm"
 
 import { DB } from "~/db"
-import { InsertUserSchema, SelectOneTimePasswordSchema, userSchema } from "~/db/schema"
+import { InsertUserSchema, userSchema } from "~/db/schema"
 import { log } from "~/logger.server"
 import { serverInternalError } from "~/utils/server-internal-error.server"
 
@@ -46,10 +46,10 @@ export async function HandleSignUp(args: HandleSignUpArgs, deps?: HandleSignUpDe
 
   try {
     await insertOneTimePassword({
+      email: userData.email,
       expiresAt: new Date(Date.now() + OTP_MAX_AGE * 1000).toISOString(),
       hash: pinHash,
       id: otpId,
-      userEmail: userData.email,
     })
   } catch (error) {
     log.error(`Failed to insert OTP: ${error instanceof Error ? error.message : "Unknown error"}`)

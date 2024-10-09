@@ -3,7 +3,7 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { createInsertSchema, createSelectSchema } from "drizzle-zod"
 import { z } from "zod"
 
-export const oneTimePassword = sqliteTable("one_time_password", {
+export const oneTimePasswordSchema = sqliteTable("one_time_password", {
   createdAt: text("created_at")
     .notNull()
     .$default(() => new Date().toISOString()),
@@ -19,8 +19,8 @@ export const oneTimePassword = sqliteTable("one_time_password", {
     .$default(() => 0),
 })
 
-export const insertOneTimePasswordSchema = createInsertSchema(oneTimePassword)
-export const selectOneTimePasswordSchema = createSelectSchema(oneTimePassword)
+export const insertOneTimePasswordSchema = createInsertSchema(oneTimePasswordSchema)
+export const selectOneTimePasswordSchema = createSelectSchema(oneTimePasswordSchema)
 
 export type InsertOneTimePasswordSchema = z.infer<typeof insertOneTimePasswordSchema>
 export type SelectOneTimePasswordSchema = z.infer<typeof selectOneTimePasswordSchema>
