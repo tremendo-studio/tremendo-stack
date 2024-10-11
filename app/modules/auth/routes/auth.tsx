@@ -12,7 +12,8 @@ import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "~/comp
 import { validateSchema } from "~/utils/validate-schema.server"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { HandleAuth } from "../services"
+import { Authenticate } from "../services"
+import { CheckOtp } from "../services/check-otp.server"
 import { RequireOneTimePassword } from "../services/require-one-time-password.server"
 import { isEmpty } from "../utils"
 
@@ -33,9 +34,12 @@ export async function action({ request }: ActionFunctionArgs) {
   const oneTimePassword = await RequireOneTimePassword(request)
 
   const bodyResult = validateSchema<FormType>({ body: await request.json(), schema: FormSchema })
-  if (!bodyResult.ok) return bodyResult.response
+  if (!bodyResult.ok) return bodyResult.error
 
-  return await HandleAuth({ oneTimePassword, pin: bodyResult.data.pin, request })
+  const checkOtoResult = await CheckOtp({ oneTimePassword, pin: bodyResult.data.pin })
+  if (!checkOtoResult.ok) return checkOtoResult.error
+
+  return await Authenticate({ oneTimePassword, request })
 }
 
 export default function Auth() {

@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ActionFunctionArgs } from "@remix-run/node"
-import { json, Link, useFetcher } from "@remix-run/react"
+import { Link, useFetcher } from "@remix-run/react"
 import clsx from "clsx"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -18,7 +18,7 @@ import { Input } from "~/components/ui/input"
 import { validateSchema } from "~/utils/validate-schema.server"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { HandleSignIn } from "../services"
+import { SignIn } from "../services"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -31,12 +31,12 @@ type FormType = typeof FormSchema.shape
 
 export async function action({ request }: ActionFunctionArgs) {
   const result = validateSchema<FormType>({ body: await request.json(), schema: FormSchema })
-  if (!result.ok) return result.response
+  if (!result.ok) return result.error
 
-  return await HandleSignIn({ request, userEmail: result.data.email })
+  return await SignIn({ request, userEmail: result.data.email })
 }
 
-export default function SignIn() {
+export default function SignInRoute() {
   const form = useForm<z.infer<typeof FormSchema>>({
     defaultValues: {
       email: "",

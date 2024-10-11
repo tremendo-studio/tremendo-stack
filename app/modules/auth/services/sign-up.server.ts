@@ -3,19 +3,19 @@ import { redirect } from "@remix-run/node"
 import { eq } from "drizzle-orm"
 
 import { DB } from "~/db"
-import { userSchema } from "~/db/schema"
+import { InsertUserSchema, userSchema } from "~/db/schema"
 import { log } from "~/logger.server"
 import { serverInternalError } from "~/utils/server-internal-error.server"
 
 import { CookieStorage, CreatePin, HashPin, InsertOneTimePassword } from "."
 import { OTP_MAX_AGE } from "../config"
 
-type HandleSignInArgs = {
+type HandleSignUpArgs = {
   request: Request
-  userEmail: string
+  userData: InsertUserSchema
 }
 
-type HandleSignInDeps = {
+type HandleSignUpDeps = {
   cookieStorage: CookieStorage
   createPin: CreatePin
   db: DB
@@ -23,8 +23,8 @@ type HandleSignInDeps = {
   insertOneTimePassword: InsertOneTimePassword
 }
 
-export async function HandleSignIn(args: HandleSignInArgs, deps?: HandleSignInDeps) {
-  const { request, userEmail } = args
+export async function SignUp(args: HandleSignUpArgs, deps?: HandleSignUpDeps) {
+  const { request, userData } = args
   const {
     cookieStorage = CookieStorage,
     createPin = CreatePin,
@@ -36,32 +36,21 @@ export async function HandleSignIn(args: HandleSignInArgs, deps?: HandleSignInDe
   const pin = createPin()
   const pinHash = await hashPin({ otp: pin })
 
-  const otpId = createId()
+  const user = await db.select().from(userSchema).where(eq(userSchema.email, userData.email))
+  if (!user.length) await db.insert(userSchema).values(userData)
 
-  try {
-    await insertOneTimePassword({
-      email: userEmail,
-      expiresAt: new Date(Date.now() + OTP_MAX_AGE * 1000).toISOString(),
-      hash: pinHash,
-      id: otpId,
-    })
-  } catch (error) {
-    log.error(`Failed to insert OTP: ${error instanceof Error ? error.message : "Unknown error"}`)
-    return serverInternalError()
-  }
+  const oneTimePassword = await insertOneTimePassword({
+    email: userData.email,
+    expiresAt: new Date(Date.now() + OTP_MAX_AGE * 1000).toISOString(),
+    hash: pinHash,
+  })
 
-  try {
-    const user = await db.select().from(userSchema).where(eq(userSchema.email, userEmail))
-    if (user) {
-      console.debug("Email sent: ", pin)
-    }
-  } catch (error) {
-    log.error(`Failed to insert OTP: ${error instanceof Error ? error.message : "Unknown error"}`)
-    return serverInternalError()
-  }
+  if (!oneTimePassword.ok) return oneTimePassword.error
+
+  console.debug("Email sent: ", pin)
 
   const session = await cookieStorage.getSession(request.headers.get("Cookie"))
-  session.set("otpId", otpId)
+  session.set("otpId", oneTimePassword.value.id)
 
   return redirect("/auth", {
     headers: {

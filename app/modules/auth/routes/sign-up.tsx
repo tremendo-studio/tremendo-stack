@@ -20,7 +20,7 @@ import { Input } from "~/components/ui/input"
 import { validateSchema } from "~/utils/validate-schema.server"
 
 import { FluidContainer, SubmitButton } from "../components"
-import { HandleSignUp } from "../services"
+import { SignUp } from "../services"
 import { isEmpty } from "../utils"
 
 const FormSchema = z.object({
@@ -39,12 +39,12 @@ type FormType = typeof FormSchema.shape
 
 export async function action({ request }: ActionFunctionArgs) {
   const result = validateSchema<FormType>({ body: await request.json(), schema: FormSchema })
-  if (!result.ok) return result.response
+  if (!result.ok) return result.error
 
-  return await HandleSignUp({ request, userData: result.data })
+  return await SignUp({ request, userData: result.data })
 }
 
-export default function SignUp() {
+export default function SignUpRoute() {
   const actionData = useActionData<typeof action>()
 
   const form = useForm<z.infer<typeof FormSchema>>({

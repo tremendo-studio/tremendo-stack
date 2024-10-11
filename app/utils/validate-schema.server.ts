@@ -12,8 +12,7 @@ export function validateSchema<T extends ZodRawShape>(args: ValidateSchemaArgs<T
   const result = schema.safeParse(body)
   if (result.error) {
     return {
-      ok: result.success,
-      response: json(
+      error: json(
         {
           fieldErrors: result.error.flatten().fieldErrors,
           message: "Invalid data. Please check your input and try again.",
@@ -23,6 +22,7 @@ export function validateSchema<T extends ZodRawShape>(args: ValidateSchemaArgs<T
           status: 400,
         },
       ),
+      ok: result.success,
     }
   }
 
